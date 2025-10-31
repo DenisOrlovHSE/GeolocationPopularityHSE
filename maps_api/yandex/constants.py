@@ -1,0 +1,1 @@
+GEOCODE_URL = "https://geocode-maps.yandex.ru/v1/"

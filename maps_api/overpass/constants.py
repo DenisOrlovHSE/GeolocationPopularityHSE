@@ -1,0 +1,1 @@
+OVERPASS_URL = "https://maps.mail.ru/osm/tools/overpass/api/interpreter"

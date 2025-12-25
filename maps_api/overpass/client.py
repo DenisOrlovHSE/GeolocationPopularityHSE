@@ -1,8 +1,8 @@
 from typing import Any
 
-import time
+import asyncio
 import math
-import requests
+import aiohttp
 
 from .constants import OVERPASS_URL
 from .models import (
@@ -25,23 +25,31 @@ R = 6371000
 class OverpassClient:
 
     def __init__(self) -> None:
-        self.session = requests.Session()
+        self.session: aiohttp.ClientSession | None = None
         self.url = OVERPASS_URL
         self.timeout = TIMEOUT
         self.interval = INTERVAL
         self.last_request_time = 0
-        self.session.headers.update({
+        self.headers = {
             'User-Agent': 'OSMClient/1.0',
             'Content-Type': 'application/x-www-form-urlencoded'
-        })
+        }
+    
+    async def start(self) -> None:
+        self.session = aiohttp.ClientSession(headers=self.headers)
+    
+    async def stop(self) -> None:
+        if self.session:
+            await self.session.close()
+            self.session = None
 
-    def get_geodata_by_coords(
+    async def get_geodata_by_coords(
         self,
         long: float,
         lat: float,
         radius: float = 50
     ) -> OverpassResponse | None:
-        self._wait_for_rate_limit()
+        await self._wait_for_rate_limit()
         query = f"""
         [out:json][timeout:25];
         (
@@ -55,27 +63,27 @@ class OverpassClient:
         """
     
         try:
-            response = self.session.post(
+            async with self.session.post(
                 self.url,
                 data={'data': query},
                 timeout=self.timeout
-            )
-            self.last_request_time = time.time()
-            response.raise_for_status()
-            data = response.json()
-            return OverpassResponse.model_validate(data)
+            ) as response:
+                self.last_request_time = asyncio.get_event_loop().time()
+                response.raise_for_status()
+                data = await response.json()
+                return OverpassResponse.model_validate(data)
         except Exception as e:
             print(f"Error getting address: {e}")
             return None
         
-    def count_categories(
+    async def count_categories(
         self,
         long: float,
         lat: float,
         radius: float = 1000,
         categories: dict[str, list[str]] = None
     ) -> dict[str, POICountResult]:
-        self._wait_for_rate_limit()
+        await self._wait_for_rate_limit()
         if categories is None:
             categories = {
                 'amenity': ['restaurant', 'cafe', 'bank'],
@@ -102,14 +110,14 @@ class OverpassClient:
         coordinates = {"lat": lat, "lon": long}
         
         try:
-            response = self.session.post(
+            async with self.session.post(
                 self.url,
                 data={'data': query},
                 timeout=self.timeout
-            )
-            self.last_request_time = time.time()
-            response.raise_for_status()
-            data = response.json()
+            ) as response:
+                self.last_request_time = asyncio.get_event_loop().time()
+                response.raise_for_status()
+                data = await response.json()
             results = {}
             for category_type, values in categories.items():
                 results[category_type] = POICountResult(
@@ -149,12 +157,12 @@ class OverpassClient:
                 )
             return error_results
         
-    def get_location_context(
+    async def get_location_context(
         self,
         long: float,
         lat: float
     ) -> LocationContext:
-        self._wait_for_rate_limit()
+        await self._wait_for_rate_limit()
         query = f"""
             [out:json][timeout:15];
             (
@@ -168,14 +176,14 @@ class OverpassClient:
             out skel qt;
         """
         try:
-            response = self.session.post(
+            async with self.session.post(
                 self.url,
                 data={'data': query},
                 timeout=self.timeout
-            )
-            self.last_request_time = time.time()
-            response.raise_for_status()
-            data = response.json()
+            ) as response:
+                self.last_request_time = asyncio.get_event_loop().time()
+                response.raise_for_status()
+                data = await response.json()
             landuse_types = []
             building_types = []
             primary_landuse = None
@@ -212,13 +220,13 @@ class OverpassClient:
                 error=str(e)
             )
         
-    def get_nearest_highway_context(
+    async def get_nearest_highway_context(
         self,
         long: float,
         lat: float,
         radius: float = 100
     ) -> HighwayContext:
-        self._wait_for_rate_limit()
+        await self._wait_for_rate_limit()
         query = f"""
         [out:json][timeout:15];
         (
@@ -229,14 +237,14 @@ class OverpassClient:
         out skel qt;
         """
         try:
-            response = self.session.post(
+            async with self.session.post(
                 self.url,
                 data={'data': query},
                 timeout=self.timeout
-            )
-            self.last_request_time = time.time()
-            response.raise_for_status()
-            data = response.json()
+            ) as response:
+                self.last_request_time = asyncio.get_event_loop().time()
+                response.raise_for_status()
+                data = await response.json()
             nearest_highway = None
             min_distance = float('inf')
             for element in data.get('elements', []):
@@ -280,13 +288,13 @@ class OverpassClient:
                 error=str(e)
             )
         
-    def get_parking_context(
+    async def get_parking_context(
         self,
         long: float,
         lat: float,
         radius: float = 100
     ) -> ParkingContext:
-        self._wait_for_rate_limit()
+        await self._wait_for_rate_limit()
         
         query = f"""
         [out:json][timeout:15];
@@ -301,14 +309,14 @@ class OverpassClient:
         out skel qt;
         """
         try:
-            response = self.session.post(
+            async with self.session.post(
                 self.url,
                 data={'data': query},
                 timeout=self.timeout
-            )
-            self.last_request_time = time.time()
-            response.raise_for_status()
-            data = response.json()
+            ) as response:
+                self.last_request_time = asyncio.get_event_loop().time()
+                response.raise_for_status()
+                data = await response.json()
             parking_count = 0
             parking_types = []
             nearest_parking_distance = float('inf')
@@ -370,13 +378,13 @@ class OverpassClient:
                 error=str(e)
             )
         
-    def get_transportation_context(
+    async def get_transportation_context(
         self,
         long: float,
         lat: float,
         radius: float = 500
     ) -> TransportationContext:
-        self._wait_for_rate_limit()
+        await self._wait_for_rate_limit()
         
         query = f"""
         [out:json][timeout:20];
@@ -395,14 +403,14 @@ class OverpassClient:
         out body;
         """
         try:
-            response = self.session.post(
+            async with self.session.post(
                 self.url,
                 data={'data': query},
                 timeout=self.timeout
-            )
-            self.last_request_time = time.time()
-            response.raise_for_status()
-            data = response.json()
+            ) as response:
+                self.last_request_time = asyncio.get_event_loop().time()
+                response.raise_for_status()
+                data = await response.json()
             context = TransportationContext()
             for element in data.get('elements', []):
                 if element['type'] == 'node' and 'tags' in element and 'lat' in element and 'lon' in element:
@@ -444,13 +452,13 @@ class OverpassClient:
                 error=str(e)
             )
         
-    def get_street_lighting_context(
+    async def get_street_lighting_context(
         self,
         long: float,
         lat: float,
         radius: float = 1000
     ) -> StreetLightingContext:
-        self._wait_for_rate_limit()
+        await self._wait_for_rate_limit()
         query = f"""
         [out:json][timeout:15];
         (
@@ -460,14 +468,14 @@ class OverpassClient:
         out body;
         """
         try:
-            response = self.session.post(
+            async with self.session.post(
                 self.url,
                 data={'data': query},
                 timeout=self.timeout
-            )
-            self.last_request_time = time.time()
-            response.raise_for_status()
-            data = response.json()
+            ) as response:
+                self.last_request_time = asyncio.get_event_loop().time()
+                response.raise_for_status()
+                data = await response.json()
             street_lamps_count = 0
             nearest_street_lamp_distance = float('inf')
             for element in data.get('elements', []):
@@ -504,13 +512,13 @@ class OverpassClient:
                 error=str(e)
             )
         
-    def get_density_context(
+    async def get_density_context(
         self,
         long: float,
         lat: float,
         radius: float = 1000
     ) -> DensityContext:
-        self._wait_for_rate_limit()
+        await self._wait_for_rate_limit()
 
         query = f"""
         [out:json][timeout:15];
@@ -522,14 +530,14 @@ class OverpassClient:
         out body;
         """
         try:
-            response = self.session.post(
+            async with self.session.post(
                 self.url,
                 data={'data': query},
                 timeout=self.timeout
-            )
-            self.last_request_time = time.time()
-            response.raise_for_status()
-            data = response.json()
+            ) as response:
+                self.last_request_time = asyncio.get_event_loop().time()
+                response.raise_for_status()
+                data = await response.json()
             building_count = 0
             address_count = 0
             for element in data.get('elements', []):
@@ -569,7 +577,7 @@ class OverpassClient:
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
         return R * c
         
-    def _wait_for_rate_limit(self) -> None:
-        delta = time.time() - self.last_request_time
+    async def _wait_for_rate_limit(self) -> None:
+        delta = asyncio.get_event_loop().time() - self.last_request_time
         if delta < self.interval:
-            time.sleep(delta)
+            await asyncio.sleep(self.interval - delta)

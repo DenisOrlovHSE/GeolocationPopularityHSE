@@ -104,14 +104,12 @@ class PredictorV1(PredictorInterface):
 
     async def predict(
         self,
-        id: float,
         atm_group: float,
         long: float,
         lat: float
     ) -> float | None:
-        await super().predict(id, atm_group, long, lat)
+        await super().predict(atm_group, long, lat)
         features = {
-            'id': id,
             'atm_group': atm_group,
             'long': long,
             'lat': lat

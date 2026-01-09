@@ -29,7 +29,6 @@ class PredictionService:
             input_data=prediction_request.model_dump()
         )
         popularity = await self.predictor.predict(
-            id=prediction_request.atm_id,
             atm_group=prediction_request.atm_group,
             long=prediction_request.longitude,
             lat=prediction_request.latitude
@@ -42,7 +41,6 @@ class PredictionService:
         )
         response = PredictionResponseDTO(
             success=popularity is not None,
-            atm_id=prediction_request.atm_id,
             atm_group=prediction_request.atm_group,
             predicted_popularity=popularity
         )
@@ -52,7 +50,6 @@ class PredictionService:
         requests = await self.repository.get_prediction_history()
         history_dto = [
             PredictionHistoryItemDTO(
-                atm_id=int(req.input_data.get("atm_id", -1)),
                 atm_group=float(req.input_data.get("atm_group", -1)),
                 predicted_popularity=req.popularity,
                 created_at=req.created_at.isoformat(),

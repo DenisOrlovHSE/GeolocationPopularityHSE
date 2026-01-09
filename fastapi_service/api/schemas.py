@@ -2,20 +2,17 @@ from pydantic import BaseModel
 
 
 class PredictionRequest(BaseModel):
-    id: int
     atm_group: float
     lat: float
     long: float
 
 
 class PredictionResponse(BaseModel):
-    id: int
     atm_group: float
     popularity: float
 
 
 class PredictionHistoryItem(BaseModel):
-    id: int
     atm_group: float
     popularity: float
     created_at: str

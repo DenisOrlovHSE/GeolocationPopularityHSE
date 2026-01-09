@@ -3,7 +3,6 @@ from pydantic import BaseModel
 
 
 class PredictionRequestDTO(BaseModel):
-    atm_id: int
     atm_group: float
     latitude: float
     longitude: float
@@ -11,13 +10,11 @@ class PredictionRequestDTO(BaseModel):
 
 class PredictionResponseDTO(BaseModel):
     success: bool
-    atm_id: int
     atm_group: float
     predicted_popularity: Optional[float] = None
 
 
 class PredictionHistoryItemDTO(BaseModel):
-    atm_id: int
     atm_group: float
     predicted_popularity: float | None
     created_at: str

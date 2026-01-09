@@ -32,7 +32,6 @@ async def forward(
         session=session
     )
     prediction_dto = PredictionRequestDTO(
-        atm_id=request.id,
         atm_group=request.atm_group,
         latitude=request.lat,
         longitude=request.long
@@ -41,7 +40,6 @@ async def forward(
     if not result.success:
         raise HTTPException(status_code=403, detail="Model failed to process the request.")
     return PredictionResponse(
-        id=request.id,
         atm_group=request.atm_group,
         popularity=result.predicted_popularity
     )
@@ -58,7 +56,6 @@ async def history(
     history = await prediction_service.get_predictions_history()
     history_response_items = [
         PredictionHistoryItem(
-            id=item.atm_id,
             atm_group=item.atm_group,
             popularity=item.predicted_popularity,
             created_at=item.created_at,

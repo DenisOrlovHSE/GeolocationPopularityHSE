@@ -5,7 +5,7 @@ from .model_interface import ModelInterface
 
 
 FEATURE_NAMES = [
-    'long', 'lat', 'region', 'atm_group', 'id',
+    'long', 'lat', 'region', 'atm_group',
     'food_drink_500', 'bus_tram_count', 'food_drink_1000',
     'food_drink_250', 'metro_distance', 'personal_services_1000',
     'metro_count', 'financial_services_250', 'financial_services_500',

@@ -35,10 +35,15 @@ class LinearModel(ModelInterface):
         super().predict(input_data)
         try:
             region = input_data['region']
+            group = input_data['atm_group']
+            if group in self.group_target_mapping:
+                input_data['atm_group'] = self.group_target_mapping[group]
+            else:
+                input_data['atm_group'] = self.overall_mean
             if region in self.region_target_mapping:
                 input_data['region'] = self.region_target_mapping[region]
             else:
-                input_data['region'] = self.region_target_mapping['overall_mean']
+                input_data['region'] = self.overall_mean
             features = pd.DataFrame([input_data])
             features = features.reindex(columns=FEATURE_NAMES)
             features = features.astype(float, errors='ignore')
@@ -55,4 +60,5 @@ class LinearModel(ModelInterface):
         with open(training_data_path, "rb") as f:
             training_data = pd.read_csv(f)
             self.region_target_mapping = training_data.groupby('region')['target'].mean().to_dict()
-            self.region_target_mapping['overall_mean'] = training_data['target'].mean()
+            self.group_target_mapping = training_data.groupby('atm_group')['target'].mean().to_dict()
+            self.overall_mean = training_data['target'].mean()

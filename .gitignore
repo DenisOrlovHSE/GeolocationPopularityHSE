@@ -5,3 +5,4 @@ __pycache__/
 temp/
 .vscode/
 atm_predictions.db
+catboost_info/
